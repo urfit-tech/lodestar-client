@@ -72,12 +72,12 @@ jobs:
           cluster: LodestarAppStagingCluster
           wait-for-service-stability: true
 
-  announce:
-    needs: [build-n-push, deploy]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Announce to Discord
-        uses: sarisia/actions-status-discord@v1
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+  # announce:
+  #   needs: [build-n-push, deploy]
+  #   if: always()
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Announce to Discord
+  #       uses: sarisia/actions-status-discord@v1
+  #       with:
+  #         webhook: ${{ secrets.DISCORD_WEBHOOK }}
