@@ -6,7 +6,7 @@ on:
     branches:
       - [release]
     paths:
-      - 'apps/cti/**'
+      - apps/cti/**
 
 env:
   REPO: lodestar-client-cti
