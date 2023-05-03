@@ -1,6 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalEnv": [
+    "AUTH_URL",
+    "TOKEN_URL",
+    "USER_INFO_URL",
+    "CLIENT_ID",
+    "CLIENT_SECRET",
+    "AUTH_SECRET"
+  ],
   "pipeline": {
     "build": {
       "outputs": [".next/**", "!.next/cache/**"]
@@ -12,3 +20,4 @@
     }
   }
 }
+
