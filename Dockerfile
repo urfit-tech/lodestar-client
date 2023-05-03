@@ -1,6 +1,6 @@
 FROM node:19-alpine
 
-WORKDIR /usr
+WORKDIR /usr/apps/cti
 
 COPY package.json ./
 COPY yarn.lock ./
