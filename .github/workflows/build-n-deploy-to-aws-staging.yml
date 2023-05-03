@@ -1,0 +1,83 @@
+name: Build & Deploy to AWS(Staging)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release
+
+env:
+  REPO: lodestar-client-cti
+  REGISTRY: 549395771420.dkr.ecr.ap-northeast-1.amazonaws.com
+
+jobs:
+  build-n-push:
+    runs-on: ubuntu-latest
+    outputs:
+      hash: ${{ steps.commit.outputs.short }}
+    steps:
+      - id: commit
+        uses: pr-mpt/actions-commit-hash@v2
+
+      - uses: actions/checkout@main
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_STAGING }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_STAGING }}
+          aws-region: ap-northeast-1
+
+      - id: image
+        name: Upload image to ECR
+        uses: appleboy/docker-ecr-action@master
+        with:
+          access_key: ${{ secrets.AWS_ACCESS_KEY_STAGING }}
+          secret_key: ${{ secrets.AWS_SECRET_KEY_STAGING }}
+          repo: ${{ env.REPO }}
+          registry: ${{ env.REGISTRY }}
+          region: ap-northeast-1
+          tags: ${{ format('latest,{0}', steps.commit.outputs.short) }}
+
+  deploy:
+    needs: build-n-push
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - taskDefinition: LodestarClientServerStaging
+            service: LodestarClientServer
+
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_STAGING }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_STAGING }}
+          aws-region: ap-northeast-1
+
+      - name: Download & Patch task definition
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ matrix.taskDefinition }} --query taskDefinition > task-definition.json
+          sed 's/\/${{ env.REPO }}:.*"/\/${{ env.REPO }}:${{ needs.build-n-push.outputs.hash }}"/g' task-definition.json > patched-task-definition.json
+          cat patched-task-definition.json
+
+      - name: Deploy task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: patched-task-definition.json
+          service: ${{ matrix.service }}
+          cluster: LodestarAppStagingCluster
+          wait-for-service-stability: true
+
+  announce:
+    needs: [build-n-push, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Announce to Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
